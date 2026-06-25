@@ -1,0 +1,14 @@
+{
+  "name": "worker-schedule-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Weekly worker schedule with React frontend and Express backend.",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "server": "npm run dev --prefix server",
+    "client": "npm run dev --prefix client"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
