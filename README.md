@@ -19,16 +19,14 @@
 ثبت الحزم:
 
 ```bash
-npm run install-all
+npm install
+npm install --prefix server
+npm install --prefix client
 ```
 
-انسخ ملف البيئة:
+أنشئ ملف إعدادات محلي باسم `server/.env`، وضع فيه رقم دخول الأدمن وأرقام العمال. لا ترفع هذا الملف إلى GitHub.
 
-```bash
-cp server/.env.example server/.env
-```
-
-افتح `server/.env` وحط رقم دخول الأدمن ورقم دخول كل عامل، ثم شغل الواجهة والباكند معًا:
+بعدها شغل الواجهة والباكند معًا:
 
 ```bash
 npm run dev
