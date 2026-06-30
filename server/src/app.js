@@ -7,6 +7,7 @@ import { ensureDatabase, readDatabase, resetDatabase, writeDatabase } from "./st
 import { configuredWorkers, publicWorkers } from "./workers.js";
 
 const app = express();
+const router = express.Router();
 const authKey = String(process.env.JWT_SECRET ?? "").trim() || "local-development-key";
 const adminPin = String(process.env.ADMIN_PIN ?? "").trim();
 
@@ -53,12 +54,12 @@ function requireAdmin(req, res, next) {
   return next();
 }
 
-app.get("/api/health", async (_req, res) => {
+router.get("/health", async (_req, res) => {
   const database = await readDatabase();
   res.json({ ok: true, updatedAt: database.updatedAt });
 });
 
-app.post("/api/auth/login", async (req, res) => {
+router.post("/auth/login", async (req, res) => {
   const code = String(req.body?.code ?? "").trim();
 
   if (!code) {
@@ -80,15 +81,15 @@ app.post("/api/auth/login", async (req, res) => {
   return res.json({ token: createToken(user), user });
 });
 
-app.get("/api/me", requireAuth, (req, res) => {
+router.get("/me", requireAuth, (req, res) => {
   res.json({ user: req.user });
 });
 
-app.get("/api/admin/workers", requireAuth, requireAdmin, async (_req, res) => {
+router.get("/admin/workers", requireAuth, requireAdmin, async (_req, res) => {
   res.json({ workers: publicWorkers() });
 });
 
-app.get("/api/admin/schedule", requireAuth, requireAdmin, async (req, res) => {
+router.get("/admin/schedule", requireAuth, requireAdmin, async (req, res) => {
   const database = await readDatabase();
   const cycle = req.query.cycle ? Number(req.query.cycle) : null;
   const workerId = req.query.workerId ? String(req.query.workerId) : null;
@@ -104,7 +105,7 @@ app.get("/api/admin/schedule", requireAuth, requireAdmin, async (req, res) => {
   });
 });
 
-app.patch("/api/admin/attendance/:dayId", requireAuth, requireAdmin, async (req, res) => {
+router.patch("/admin/attendance/:dayId", requireAuth, requireAdmin, async (req, res) => {
   const dayId = String(req.params.dayId);
   const database = await readDatabase();
   const day = database.schedule.find((item) => item.id === dayId);
@@ -131,7 +132,7 @@ app.patch("/api/admin/attendance/:dayId", requireAuth, requireAdmin, async (req,
   });
 });
 
-app.get("/api/worker/schedule", requireAuth, async (req, res) => {
+router.get("/worker/schedule", requireAuth, async (req, res) => {
   if (req.user?.role !== "worker") {
     return res.status(403).json({ message: "هذه الصفحة للعمال فقط" });
   }
@@ -141,16 +142,16 @@ app.get("/api/worker/schedule", requireAuth, async (req, res) => {
   res.json({ days: withAttendance(days, database.attendance) });
 });
 
-app.post("/api/admin/reset", requireAuth, requireAdmin, async (_req, res) => {
+router.post("/admin/reset", requireAuth, requireAdmin, async (_req, res) => {
   const database = await resetDatabase();
   res.json({ message: "تمت إعادة ضبط الجدول", stats: groupStats(database.schedule, database.attendance) });
 });
 
-app.use((req, res, next) => {
-  if (req.path.startsWith("/api")) {
-    return res.status(404).json({ message: "المسار غير موجود" });
-  }
-  return next();
+app.use("/api", router);
+app.use("/", router);
+
+app.use((_req, res) => {
+  res.status(404).json({ message: "المسار غير موجود" });
 });
 
 app.use((error, _req, res, _next) => {
