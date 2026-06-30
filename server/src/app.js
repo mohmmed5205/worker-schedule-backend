@@ -18,6 +18,16 @@ function createToken(user) {
   return jwt.sign(user, authKey, { expiresIn: "30d" });
 }
 
+function getConfigStatus() {
+  const workerPinsCount = configuredWorkers().filter((item) => item.pin).length;
+  return {
+    hasAdminPin: Boolean(adminPin),
+    workerPinsCount,
+    hasJwtSecret: Boolean(String(process.env.JWT_SECRET ?? "").trim()),
+    isVercel: Boolean(process.env.VERCEL)
+  };
+}
+
 function withAttendance(days, attendance) {
   return days.map((day) => ({
     ...day,
@@ -56,7 +66,7 @@ function requireAdmin(req, res, next) {
 
 router.get("/health", async (_req, res) => {
   const database = await readDatabase();
-  res.json({ ok: true, updatedAt: database.updatedAt });
+  res.json({ ok: true, updatedAt: database.updatedAt, config: getConfigStatus() });
 });
 
 router.post("/auth/login", async (req, res) => {
@@ -64,6 +74,11 @@ router.post("/auth/login", async (req, res) => {
 
   if (!code) {
     return res.status(400).json({ message: "اكتب رقم الدخول" });
+  }
+
+  const config = getConfigStatus();
+  if (!config.hasAdminPin && config.workerPinsCount === 0) {
+    return res.status(500).json({ message: "أرقام الدخول غير مضافة في Environment Variables داخل Vercel" });
   }
 
   if (adminPin && code === adminPin) {
